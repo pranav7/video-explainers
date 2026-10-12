@@ -1,6 +1,7 @@
-# video-explainers
+# Video Explainers as Skill for AI Coding Agents
 
-Ask your coding agent to explain anything as a short, narrated video.
+Super fast video explainers for AI agents, made locally on your machine. Ask your coding
+agent to explain anything as a short, narrated video.
 
 > The output format I am most bullish on is fully custom / bespoke explainer videos
 > generated on any arbitrary topic.
