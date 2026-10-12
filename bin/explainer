@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Narrated, 3Blue1Brown-style explainer videos. Run `explainer -h`.
+# This script sets up the environment that the explainer package needs, then runs the
+# package with the versions pinned in uv.lock. Put it on PATH with a symlink.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export UV_PROJECT_ENVIRONMENT="${EXPLAINER_VENV:-$HOME/.cache/video-explainer/venv}"
+export PATH="$HOME/Library/TinyTeX/bin/universal-darwin:$PATH"
+export PYTHONWARNINGS="ignore"
+export PYTHONDONTWRITEBYTECODE=1
+export ESPEAK_PREFIX="${ESPEAK_PREFIX:-/opt/homebrew/opt/espeak-ng}"
+
+run() { uv run --quiet --frozen --project "$ROOT" "$@"; }
+
+# Install the dependencies that are not Python packages, then sync the env, download the
+# icons, and test Kokoro and LaTeX.
+doctor() {
+  local brew_pkgs=(pkgconf cairo pango ffmpeg espeak-ng) missing=()
+  for p in "${brew_pkgs[@]}"; do brew list --formula "$p" >/dev/null 2>&1 || missing+=("$p"); done
+  if ((${#missing[@]})); then
+    echo "Installing with Homebrew: ${missing[*]}"
+    brew install "${missing[@]}"
+  fi
+
+  # Inter and JetBrains Mono, the kit's fonts.
+  local fonts=(font-inter font-jetbrains-mono) missing_fonts=()
+  for f in "${fonts[@]}"; do brew list --cask "$f" >/dev/null 2>&1 || missing_fonts+=("$f"); done
+  if ((${#missing_fonts[@]})); then
+    echo "Installing fonts with Homebrew: ${missing_fonts[*]}"
+    brew install --cask "${missing_fonts[@]}"
+  fi
+
+  if ! command -v latex >/dev/null; then
+    echo "Installing TinyTeX into ~/Library/TinyTeX (no sudo)"
+    curl -fsSL https://yihui.org/tinytex/install-bin-unix.sh | sh
+  fi
+  # Packages Manim's default TeX template uses.
+  tlmgr install standalone preview doublestroke relsize fundus-calligra wasysym physics \
+    dvisvgm rsfs wasy setspace babel-english everysel jknapltx mathastext microtype ragged2e \
+    >/dev/null
+
+  echo "Syncing Python env at $UV_PROJECT_ENVIRONMENT"
+  uv sync --quiet --frozen --project "$ROOT"
+  run explainer smoke
+}
+
+case "${1:-}" in
+  doctor) doctor ;;
+  test) shift; run pytest "$ROOT/tests" "$@" ;;
+  python) shift; run python "$@" ;;
+  "") run explainer -h ;;
+  *) run explainer "$@" ;;
+esac

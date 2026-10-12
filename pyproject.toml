@@ -1,0 +1,37 @@
+[project]
+name = "explainer"
+version = "0.2.0"
+description = "Narrated, 3Blue1Brown-style explainer videos that AI coding agents can make: Manim, local Kokoro speech, a component kit and a layout check"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Pranav" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "manim>=0.21",
+  "kokoro>=0.9.4",
+  "soundfile",
+  # kokoro does not bound transformers; without this the resolver picks 4.12, which fails to build
+  "transformers>=4.45",
+  # misaki downloads this at runtime on first use; pin it so the env is complete after `uv sync`
+  "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
+
+[project.urls]
+Repository = "https://github.com/pranav7/explainer"
+
+[project.scripts]
+explainer = "explainer.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.metadata]
+# For the en-core-web-sm wheel URL in dependencies.
+allow-direct-references = true
