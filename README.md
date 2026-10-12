@@ -1,10 +1,9 @@
-# explainer
+# Video Explainers as Skill for AI Coding Agents
 
-Narrated, 3Blue1Brown-style explainer videos that AI coding agents can make.
+Ssuper fast video explainers for AI Agents, made locally on your machine.
 
 Ask your agent for a video that explains something: an algorithm, an incident, a
-design, a pull request. The agent writes a script. The `explainer` toolkit turns the
-script into a narrated MP4:
+design, a pull request.
 
 - [Manim](https://www.manim.community/) draws the animation.
 - [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) speaks the narration, on your
