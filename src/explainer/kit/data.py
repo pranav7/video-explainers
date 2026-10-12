@@ -11,6 +11,13 @@ from explainer.kit.text import label
 from explainer.theme import FAINT, INK, LINE, SANS, SKY, SMALL_SIZE, SUBTLE, TEXT_SIZE
 
 
+def _figure(value: float) -> str:
+    """A value as people write it: 1,000,000 and 62,500, or 0.75."""
+    if float(value).is_integer():
+        return f"{value:,.0f}"
+    return f"{value:,.2f}".rstrip("0").rstrip(".")
+
+
 def _track(width: float, height: float):
     return RoundedRectangle(corner_radius=height / 2, width=width, height=height, fill_color=LINE, fill_opacity=1,
                             stroke_width=0)
@@ -31,7 +38,7 @@ def bar(value: float, total: float, color, width: float = 5, height: float = 0.3
     """
     track = _track(width, height)
     fill = _fill(track, value / total if total else 0, color)
-    words = label(text or f"{value:g} of {total:g}", size, color, weight="MEDIUM").next_to(track, RIGHT, buff=0.3)
+    words = label(text or f"{_figure(value)} of {_figure(total)}", size, color, weight="MEDIUM").next_to(track, RIGHT, buff=0.3)
     return VGroup(track, fill, words)
 
 
@@ -39,8 +46,9 @@ def bars(items, color=SKY, width: float = 6, height: float = 0.36, size: float =
          max_value: float | None = None) -> VGroup:
     """A horizontal bar chart. items: (label, value) or (label, value, colour).
 
-    Returns a VGroup of rows; a row is VGroup(name, track, fill, value). Grow the fills with
-    LaggedStart(*[GrowFromEdge(r[2], LEFT) for r in chart]).
+    Returns a VGroup of rows; a row is VGroup(name, track, fill, value). Values show with
+    thousands separators (1,000,000). To bring in a row and grow its bar, animate different
+    parts: self.play(appear(r[0], r[1], r[3]), GrowFromEdge(r[2], LEFT)).
     """
     items = [(i[0], i[1], i[2] if len(i) > 2 else color) for i in items]
     if not items:
@@ -52,7 +60,7 @@ def bars(items, color=SKY, width: float = 6, height: float = 0.36, size: float =
     for name, (_, value, c) in zip(names, items):
         track = _track(width, height)
         fill = _fill(track, value / top, c)
-        number = label(f"{value:g}", size, c, weight="SEMIBOLD").next_to(track, RIGHT, buff=0.25)
+        number = label(_figure(value), size, c, weight="SEMIBOLD").next_to(track, RIGHT, buff=0.25)
         name.next_to(track, LEFT, buff=0.3).shift(LEFT * (column - name.width))
         rows.add(VGroup(name, track, fill, number))
     return rows.arrange(DOWN, buff=0.35, aligned_edge=LEFT)
