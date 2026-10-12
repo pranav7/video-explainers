@@ -190,3 +190,12 @@ def test_numbers_show_with_separators():
     chart = bars([("start", 1_000_000), ("guess 4", 62_500)])
     assert [r[3].original_text for r in chart] == ["1,000,000", "62,500"]
     assert bar(17, 20, MINT)[2].original_text == "17 of 20"
+
+
+def test_bubble_is_one_outline_sized_to_its_text():
+    short, long = bubble("lower"), bubble("a longer reply that wraps onto two lines", width=4)
+    assert len(short[0].get_subpaths()) == 1  # no seam between the body and the tail
+    assert short.width < long.width <= 4.6
+    for tail in (LEFT, RIGHT, DOWN):
+        assert len(bubble("x", tail=tail)[0].get_subpaths()) == 1
+    assert len(avatar("bot", SKY)) == 2

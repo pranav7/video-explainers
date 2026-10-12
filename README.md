@@ -15,11 +15,11 @@ It is free, and it needs no API keys.
 
 ## Example
 
-[![A 47-second video that explains binary search](examples/binary-search/preview.gif)](examples/binary-search/video.mp4)
+https://github.com/user-attachments/assets/b8f9ecf4-8385-432d-8297-880810db78fd
 
-[Watch it with sound](examples/binary-search/video.mp4). The request was a short video
-that explains a simple, interesting concept. The agent wrote the
-[script](examples/binary-search/script.md) and the [scenes](examples/binary-search/video.py).
+The request was a short video that explains a simple, interesting concept. The agent
+wrote the [script](examples/binary-search/script.md) and the
+[scenes](examples/binary-search/video.py).
 
 ## Install
 

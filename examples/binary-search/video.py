@@ -51,8 +51,8 @@ class Hook(ExplainerScene):
             t.wait_until("twenty")
             self.play(appear(guesses), run_time=0.8)
 
-        person = icon("user", SUBTLE, height=1.2).move_to([-5.0, -2.8, 0])
-        said = bubble("higher", ANSWER, width=2.6, size=34).next_to(person, RIGHT, buff=0.25).shift(UP * 0.55)
+        person = avatar("user", SUBTLE, size=1.1).move_to([-5.0, -2.8, 0])
+        said = bubble("higher", ANSWER, size=34).next_to(person, RIGHT, buff=0.2).align_to(person, DOWN)
         with self.narrate("After each guess, you only tell me higher or lower.") as t:
             self.play(appear(person), run_time=0.6)
             t.wait_until("higher")
