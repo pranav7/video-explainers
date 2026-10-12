@@ -70,6 +70,8 @@ for a beat with animations at different words.
   `Flash`, or a colour change (`at="word"`, or `t.wait_until("word")`).
 - **Zoom instead of redraw.** To show a detail, move the camera to it, and then back:
   `self.camera.frame.animate.scale(0.5).move_to(m)`, then `.scale(2).move_to(ORIGIN)`.
+  Objects that you add while zoomed in look larger by the zoom factor, so scale them
+  down by the same factor (`.scale(0.5)` for a zoom of 2).
 - **Transform, do not cut.** Go from one state to the next with `Transform`,
   `ReplacementTransform`, and `TransformMatchingTex`. The viewer sees where each
   thing came from.
@@ -97,7 +99,8 @@ explainer render video.py
 
 This command renders all scenes in parallel at 480p, joins them into `video.mp4`,
 and prints the layout check. If a scene fails, the output shows the line in
-`video.py` and the exception. All failures show in one run, so fix all of them
+`video.py` and the exception. Output from `print()` in `video.py` goes to
+`media/logs/<Scene>.log`. All failures show in one run, so fix all of them
 before the next run.
 
 Fix each layout warning. If a warning is a false alarm, set `m.lint_ok = True` on that

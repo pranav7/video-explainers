@@ -54,7 +54,8 @@ def _font(*names: str) -> str:
 
 
 SANS = _font("Inter", "Helvetica Neue")
-MONO = _font("JetBrains Mono", "Menlo")
+# The NL ("no ligatures") build: code keeps "<=" and "==" as the characters people type.
+MONO = _font("JetBrains Mono NL", "JetBrains Mono", "Menlo")
 
 
 def tint(color, amount: float = 0.16) -> ManimColor:
