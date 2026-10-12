@@ -1,4 +1,4 @@
-# explainer
+# video-explainers
 
 Narrated, 3Blue1Brown-style explainer videos that AI coding agents can make.
 
@@ -39,8 +39,8 @@ script into a narrated MP4:
 ## Install
 
 ```bash
-git clone https://github.com/pranav7/explainer.git ~/explainer
-ln -s ~/explainer/bin/explainer ~/.local/bin/explainer   # or any directory on PATH
+git clone https://github.com/pranav7/video-explainers.git ~/video-explainers
+ln -s ~/video-explainers/bin/explainer ~/.local/bin/explainer   # or any directory on PATH
 explainer doctor
 ```
 
@@ -64,7 +64,7 @@ the script, and hand the build to a subagent.
 For Claude Code, link the skill into your skills directory:
 
 ```bash
-ln -s ~/explainer/skills/explain-video ~/.claude/skills/explain-video
+ln -s ~/video-explainers/skills/explain-video ~/.claude/skills/explain-video
 ```
 
 Then ask for a video, for example: "Make an explainer video about how DNS resolution

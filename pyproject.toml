@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/pranav7/explainer"
+Repository = "https://github.com/pranav7/video-explainers"
 
 [project.scripts]
 explainer = "explainer.cli:main"
