@@ -22,7 +22,7 @@ again. A new subagent has a small context, so the build is cheaper and faster th
 The subagent also runs in the background, so the user can continue to work with you.
 
 The `explainer` command does the rest of the work. It must be on `PATH`. For setup,
-see https://github.com/pranav7/explainer. Run `explainer -h` for the commands.
+see https://github.com/pranav7/video-explainers. Run `explainer -h` for the commands.
 
 ## 0. Setup (once per machine)
 

@@ -5,7 +5,7 @@ from explainer.kit import *
 
 
 def test_theme_fonts_installed():
-    assert SANS == "Inter" and MONO == "JetBrains Mono"  # `explainer doctor` installs them
+    assert SANS == "Inter" and MONO == "JetBrains Mono NL"  # `explainer doctor` installs them
 
 
 def test_lines_of_keeps_indentation():
@@ -184,3 +184,9 @@ def test_edge_inputs_raise_clear_errors():
     with pytest.raises(ValueError, match="at least one"):
         bars([])
     assert bars([("a", 0), ("b", 0)]) and bar(0, 0, MINT)
+
+
+def test_numbers_show_with_separators():
+    chart = bars([("start", 1_000_000), ("guess 4", 62_500)])
+    assert [r[3].original_text for r in chart] == ["1,000,000", "62,500"]
+    assert bar(17, 20, MINT)[2].original_text == "17 of 20"
