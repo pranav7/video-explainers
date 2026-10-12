@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+import numpy as np
 from manim import (
     DL,
     DOWN,
     DR,
     LEFT,
+    ORIGIN,
     RIGHT,
     UL,
     UP,
@@ -16,7 +18,6 @@ from manim import (
     CapStyleType,
     Circle,
     Line,
-    Polygon,
     Rectangle,
     RoundedRectangle,
     SurroundingRectangle,
@@ -164,16 +165,65 @@ def squares(n: int, cols: int, color, side: float = 0.36, fill: float = 0.3, buf
     return group.arrange_in_grid(cols=cols, buff=buff)
 
 
-def bubble(text: str, color=AMBER, width: float = 4.5, size: float = SMALL_SIZE) -> VGroup:
-    """A comment or speech bubble with wrapped text and a tail. [0] frame (bubble and tail), [1] text."""
+def _bubble_outline(w: float, h: float, tail) -> VMobject:
+    """One closed path: a rounded rectangle whose bottom-left (LEFT) or bottom-right (RIGHT)
+    corner runs out into a pointed tail, or with a tail under its bottom edge (DOWN)."""
+    r, t = min(0.22, h / 2), min(0.34, h * 0.55)
+    x0, x1, y0, y1 = -w / 2, w / 2, -h / 2, h / 2
+    path = VMobject()
+    path.start_new_path(np.array([x0 + r, y1, 0]))
+
+    def line(x, y):
+        path.add_line_to(np.array([x, y, 0]))
+
+    def corner(cx, cy, x, y):
+        # A quarter circle from the current point, around the corner (cx, cy), to (x, y).
+        a, c, b = path.get_last_point(), np.array([cx, cy, 0]), np.array([x, y, 0])
+        path.add_cubic_bezier_curve_to(a + (c - a) * 0.552, b + (c - b) * 0.552, b)
+
+    line(x1 - r, y1)
+    corner(x1, y1, x1, y1 - r)
+    line(x1, y0 + r)
+    if tail[0] > 0:  # the bottom-right corner becomes the tail
+        line(x1 + t * 0.6, y0 - t * 0.3)
+        line(x1 - r - t * 0.5, y0)
+    else:
+        corner(x1, y0, x1 - r, y0)
+    if tail[0] == 0:  # a tail under the bottom edge
+        a = x0 + r + 0.45
+        line(a, y0)
+        line(a - 0.4, y0 - t)
+        line(a - 0.3, y0)
+    if tail[0] < 0:  # the bottom-left corner becomes the tail
+        line(x0 + r + t * 0.5, y0)
+        line(x0 - t * 0.6, y0 - t * 0.3)
+        line(x0, y0 + r)
+    else:
+        line(x0 + r, y0)
+        corner(x0, y0, x0, y0 + r)
+    line(x0, y1 - r)
+    corner(x0, y1, x0 + r, y1)
+    return path
+
+
+def bubble(text: str, color=AMBER, width: float = 4.5, size: float = SMALL_SIZE, tail=LEFT) -> VGroup:
+    """A speech bubble: one rounded outline with a tail, sized to its text and no wider than `width`.
+
+    tail is LEFT, RIGHT or DOWN: the side that points at the speaker. Put the bubble beside an
+    avatar(): VGroup(avatar(), bubble("lower")).arrange(RIGHT, aligned_edge=DOWN).
+    [0] frame (one shape), [1] text.
+    """
     words = label(text, size, INK, width=width - 0.6)
-    body = RoundedRectangle(corner_radius=0.2, width=width, height=words.height + 0.55, fill_color=tint(color, 0.16),
-                            fill_opacity=1, stroke_color=color, stroke_width=2)
-    corner = body.get_corner(DL) + RIGHT * 0.45
-    tail = Polygon(corner + UP * 0.02, corner + RIGHT * 0.4 + UP * 0.02, corner + DOWN * 0.3 + RIGHT * 0.05,
-                   fill_color=tint(color, 0.16), fill_opacity=1, stroke_color=color, stroke_width=2)
-    tail.set_z_index(body.z_index - 0.1)
-    return VGroup(VGroup(body, tail), words.move_to(body))
+    frame = _bubble_outline(words.width + 0.6, words.height + 0.45, tail)
+    frame.set_fill(tint(color, 0.16), 1).set_stroke(color, 2)
+    # The outline is drawn with its body centred on the origin; the tail sits outside.
+    return VGroup(frame, words.move_to(ORIGIN))
+
+
+def avatar(icon_name: str = "user", color=SUBTLE, size: float = 0.9) -> VGroup:
+    """A round avatar with a Lucide icon inside, for a speaker: "user", "bot", "users". [0] circle, [1] icon."""
+    circle = Circle(radius=size / 2, fill_color=tint(color, 0.22), fill_opacity=1, stroke_color=color, stroke_width=2)
+    return VGroup(circle, icon(icon_name, color, height=size * 0.52).move_to(circle))
 
 
 def _round(m: VMobject) -> VMobject:
