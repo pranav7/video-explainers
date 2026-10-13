@@ -42,6 +42,15 @@ def test_connect_meets_the_edges():
     assert np.allclose(arrow.get_end(), [2, 0, 0], atol=0.05)
 
 
+def test_connect_meets_rounded_corners():
+    card = box("calculate", SKY, width=4, height=2)
+    r = card[0].corner_radius
+    end = connect(card.get_corner(DL) * 3, card, buff=0).get_end()
+    # The tip lands on the bottom-left corner's arc, not on the bounding box corner.
+    centre = card.get_corner(DL) + np.array([r, r, 0])
+    assert np.linalg.norm(end - centre) == pytest.approx(r, abs=0.02)
+
+
 def test_connect_dashed_curved_and_points():
     assert connect(LEFT, RIGHT, dashed=True).get_length() > 1.5
     assert connect(Square().shift(LEFT * 3), Square().shift(RIGHT * 3), curve=0.6).height > 0.3

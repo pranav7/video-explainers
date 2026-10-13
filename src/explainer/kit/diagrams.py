@@ -18,6 +18,7 @@ from manim import (
     Graph,
     Line,
     Mobject,
+    RoundedRectangle,
     StealthTip,
     TipableVMobject,
     VGroup,
@@ -34,14 +35,33 @@ def _point(m) -> np.ndarray:
     return m.get_center() if isinstance(m, Mobject) else np.array(m, dtype=float)
 
 
+def _corner_radius(m: Mobject) -> float:
+    """The corner radius of m's rounded frame: a RoundedRectangle in m that fills m's bounding box."""
+    for part in m.get_family():
+        if (isinstance(part, RoundedRectangle) and abs(part.width - m.width) < 0.05
+                and abs(part.height - m.height) < 0.05):
+            return float(part.corner_radius)
+    return 0.0
+
+
 def _edge_point(m, direction: np.ndarray) -> np.ndarray:
-    """Where a ray from m's centre in `direction` leaves m's bounding box. A point stays itself."""
+    """Where a ray from m's centre in `direction` leaves m's bounding box, following rounded
+    corners if m has a rounded frame. A point stays itself."""
     if not isinstance(m, Mobject):
         return np.array(m, dtype=float)
     c, hw, hh = m.get_center(), m.width / 2, m.height / 2
-    dx, dy = direction[0], direction[1]
-    scale = min(hw / abs(dx) if dx else np.inf, hh / abs(dy) if dy else np.inf)
-    return c + np.array([dx, dy, 0]) * scale
+    u = np.array([direction[0], direction[1], 0], dtype=float)
+    u /= np.linalg.norm(u) or 1
+    t = min(hw / abs(u[0]) if u[0] else np.inf, hh / abs(u[1]) if u[1] else np.inf)
+    hit = u * t
+    r = min(_corner_radius(m), hw, hh)
+    if r and abs(hit[0]) > hw - r and abs(hit[1]) > hh - r:
+        # The ray leaves through a rounded corner: meet the arc, not the bounding box corner.
+        k = np.array([np.sign(hit[0]) * (hw - r), np.sign(hit[1]) * (hh - r), 0])
+        b = np.dot(u, k)
+        t = b + np.sqrt(max(b * b - np.dot(k, k) + r * r, 0))
+        hit = u * t
+    return c + hit
 
 
 def connect(a, b, color=SUBTLE, buff: float = 0.12, dashed: bool = False, curve: float = 0, stroke: float = STROKE):
