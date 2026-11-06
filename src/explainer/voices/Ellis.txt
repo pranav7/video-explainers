@@ -1,0 +1,1 @@
+When you look for a number in a long sorted list, it helps to start in the middle. If the value there is too small, everything before it is too small as well, so you can set that half aside and keep going.

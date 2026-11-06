@@ -42,6 +42,9 @@ doctor() {
 
   echo "Syncing Python env at $UV_PROJECT_ENVIRONMENT"
   uv sync --quiet --frozen --project "$ROOT"
+  if [[ "${EXPLAINER_ENGINE:-qwen}" == qwen ]]; then
+    run explainer models
+  fi
   run explainer smoke
 }
 

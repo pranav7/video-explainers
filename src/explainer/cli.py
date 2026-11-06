@@ -56,7 +56,7 @@ def api() -> str:
     out += ["", "### Scene methods (class X(ExplainerScene))", ""]
     for name in ("say", "narrate", "fade_all", "focus", "unfocus"):
         out.append(f"- `self.{name}{_signature(getattr(NarrationMixin, name), method=True)}`: {_summary(getattr(NarrationMixin, name))}")
-    out += ["- class attributes `title`, `voice`, `speed`: chapter title, Kokoro voice, speech speed.",
+    out += ["- class attributes `title`, `engine`, `voice`, `speed`: chapter, local speech backend, narrator, speed.",
             "", "### The spoken line (with self.narrate(text) as t)", ""]
     for name in ("wait_until", "remaining", "time_of"):
         out.append(f"- `t.{name}{_signature(getattr(Narration, name), method=True)}`: {_summary(getattr(Narration, name))}")
@@ -75,7 +75,7 @@ def smoke() -> None:
         os.chdir(tmp)
         synthesize("Ready.")
         MathTex(r"e^{i\pi}+1=0")
-    print("Kokoro and LaTeX work")
+    print("Local speech and LaTeX work")
 
 
 def main() -> None:
@@ -105,12 +105,18 @@ def main() -> None:
     s.add_argument("text")
     s.add_argument("out", type=Path)
     s.add_argument("--voice")
-    s.add_argument("--speed", type=float)
+    s.add_argument("--speed", type=float, help="optional speech speed factor (default: 1.0, or EXPLAINER_SPEED)")
+    s.add_argument("--engine", choices=["qwen", "kokoro"])
+    s.add_argument("--spoken", help="spoken spelling, while TEXT remains the caption transcript")
 
     v = sub.add_parser("voices", help="write one sample per voice to DIR (default ./voice-samples)")
     v.add_argument("dir", type=Path, nargs="?", default=Path("voice-samples"))
+    v.add_argument("--engine", choices=["qwen", "kokoro"])
+    v.add_argument("--text", default="A matrix moves every point in the plane at once. Watch where these two arrows land.")
 
-    sub.add_parser("smoke", help="download the icons, check that Kokoro and LaTeX work")
+    sub.add_parser("models", help="download the pinned local Qwen speech model and word aligner")
+
+    sub.add_parser("smoke", help="download the icons, check that local speech and LaTeX work")
 
     args = parser.parse_args()
     if args.cmd == "guide":
@@ -124,22 +130,27 @@ def main() -> None:
 
         frames(args.video.resolve(), args.scenes)
     elif args.cmd == "say":
-        from explainer.tts import DEFAULT_SPEED, DEFAULT_VOICE, synthesize
+        from explainer.tts import synthesize
 
-        wav, meta = synthesize(args.text, args.voice or DEFAULT_VOICE, args.speed or DEFAULT_SPEED)
+        wav, meta = synthesize(args.text, args.voice, args.speed, engine=args.engine, spoken=args.spoken)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_bytes(wav.read_bytes())
         print(f"{args.out}  {meta['duration']:.1f}s")
     elif args.cmd == "voices":
-        from explainer.tts import VOICES, synthesize
+        from explainer.tts import DEFAULT_ENGINE, KOKORO_VOICES, QWEN_VOICES, synthesize
 
         args.dir.mkdir(parents=True, exist_ok=True)
-        text = "A matrix is a way to move every point in the plane at once. Watch where these two arrows land."
-        for voice in VOICES:
-            wav, _ = synthesize(text, voice)
+        engine = args.engine or DEFAULT_ENGINE
+        for voice in QWEN_VOICES if engine == "qwen" else KOKORO_VOICES:
+            wav, _ = synthesize(args.text, voice, engine=engine)
             (args.dir / f"{voice}.wav").write_bytes(wav.read_bytes())
         print(f"Listen with: afplay {args.dir}/<voice>.wav")
     elif args.cmd == "smoke":
         smoke()
+    elif args.cmd == "models":
+        from explainer.tts import setup_models
+
+        setup_models()
 
 
 if __name__ == "__main__":

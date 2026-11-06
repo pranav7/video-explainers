@@ -22,7 +22,7 @@ from manim import ORIGIN, FadeIn, FadeOut, Group, MovingCameraScene, Rectangle, 
 
 from explainer.theme import BG
 from explainer.lint import Lint, visible
-from explainer.tts import DEFAULT_SPEED, DEFAULT_VOICE, synthesize
+from explainer.tts import DEFAULT_SPEED, synthesize
 
 config.background_color = BG
 # `explainer render` runs each scene in its own process and names it here. Each scene keeps its
@@ -32,9 +32,9 @@ if os.environ.get("EXPLAINER_SCENE"):
     config.tex_dir = "{media_dir}/Tex/" + os.environ["EXPLAINER_SCENE"]
 
 # Silence kept after each narrate() block, in seconds.
-GAP = 0.3
+GAP = 0.12
 STATIC_SECONDS = 6.0  # longest stretch of a line with no animation
-MAX_WORDS = 32  # words in one narrate() line
+MAX_WORDS = 100  # connected passages can contain several visual beats
 
 
 def _norm(word: str) -> str:
@@ -77,6 +77,9 @@ class Narration:
         Matching ignores case and punctuation: "side" matches "Side,". occurrence picks a repeated word.
         """
         delay = self.time_of(word, occurrence) - self.elapsed()
+        if delay < -0.25:
+            self.scene._lint.warn(("late-cue", self.start, word, occurrence),
+                                  f"word cue {word!r} is {-delay:.2f}s late; shorten the preceding animation")
         if delay > 1 / 60:
             self.scene.wait(delay)
 
@@ -93,7 +96,8 @@ class Narration:
 class NarrationMixin:
     """Narration for any Manim scene class: `class Zoom(NarrationMixin, ThreeDScene)`."""
 
-    voice = DEFAULT_VOICE
+    engine: str | None = None
+    voice: str | None = None
     speed = DEFAULT_SPEED
     # Chapter title in the video. Default: the class name split into words.
     title: str | None = None
@@ -107,16 +111,20 @@ class NarrationMixin:
         self._focused: list = []
 
     @contextmanager
-    def narrate(self, text: str, gap: float = GAP):
-        """Speak `text` from now. On exit, wait until the speech ends, plus `gap` seconds."""
-        wav, meta = synthesize(text, self.voice, self.speed)
+    def narrate(self, text: str, gap: float = GAP, *, spoken: str | None = None):
+        """Speak a connected passage, with an optional spoken spelling.
+
+        Word cues and captions use `text`; `spoken` changes pronunciation only.
+        On exit, wait for speech plus `gap` seconds. Use gap=0 for continuous delivery.
+        """
+        wav, meta = synthesize(text, self.voice, self.speed, engine=self.engine, spoken=spoken)
         self.add_sound(str(wav))
-        line = Narration(self, text, self.renderer.time, meta["duration"], meta["words"])
+        line = Narration(self, meta["text"], self.renderer.time, meta["duration"], meta["words"])
         self._line = line
-        self._beats.append({"start": line.start, "duration": line.duration, "text": text, "words": meta["words"]})
+        self._beats.append({"start": line.start, "duration": line.duration, "text": meta["text"], "words": meta["words"]})
         words = len(text.split())
         if words > MAX_WORDS:
-            self._lint.warn(("long", line.start), f"line has {words} words; split it, one visual change per line")
+            self._lint.warn(("long", line.start), f"passage has {words} words; split at a natural pause")
         yield line
         # When the line's own animations have finished: the moment a contact-sheet tile shows.
         self._beats[-1]["settled"] = max(self.renderer.time, line.start + line.duration)
@@ -126,6 +134,9 @@ class NarrationMixin:
         static = line.longest_static()
         if static > STATIC_SECONDS:
             self._lint.warn(("static", line.start), f"picture is static for {static:.1f}s of this line")
+        overrun = line.elapsed() - line.duration
+        if overrun > 0.3:
+            self._lint.warn(("overrun", line.start), f"animations finish {overrun:.2f}s after speech; shorten them or add a spoken pause")
         left = line.duration + gap - line.elapsed()
         if left > 1 / 60:
             self.wait(left)
@@ -143,7 +154,7 @@ class NarrationMixin:
                 self.play(*animations, run_time=run_time or min(max(t.remaining(), 0.6), 1.2))
 
     def fade_all(self, run_time: float = 0.6):
-        """Fade out everything on screen. End each scene with this."""
+        """Fade out everything on screen when the story calls for a visual reset."""
         if self.mobjects:
             self.play(FadeOut(Group(*self.mobjects)), run_time=run_time)
 
