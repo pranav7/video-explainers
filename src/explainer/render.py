@@ -33,7 +33,7 @@ def duration(path: Path) -> float:
     return float(ffprobe(path, "format=duration"))
 
 
-def scenes_in(file: Path) -> list[str]:
+def _scene_classes(file: Path) -> dict:
     """The narrated scene classes defined in `file`, in source order."""
     from explainer.narration import NarrationMixin
 
@@ -50,14 +50,19 @@ def scenes_in(file: Path) -> list[str]:
 
     # Module globals keep the order in which the file defines them. A base class with no
     # construct() of its own is a helper, not a scene.
-    scenes = [
-        name for name, c in vars(module).items()
+    scenes = {
+        name: c for name, c in vars(module).items()
         if inspect.isclass(c) and issubclass(c, NarrationMixin) and c.__module__ == module.__name__
         and c.construct is not Scene.construct
-    ]
+    }
     if not scenes:
         sys.exit(f"error: {file.name} defines no narrated scene (a subclass of ExplainerScene with a construct method)")
     return scenes
+
+
+def scenes_in(file: Path) -> list[str]:
+    """The narrated scene names defined in `file`, in source order."""
+    return list(_scene_classes(file))
 
 
 # ---------------------------------------------------------------- render
@@ -66,7 +71,8 @@ def scenes_in(file: Path) -> list[str]:
 def render(file: Path, names: list[str], quality: str, jobs: int, captions: bool = False) -> None:
     if file.stem == "explainer":
         sys.exit(f"error: rename {file.name} (for example to video.py). The name hides the explainer package.")
-    order = scenes_in(file)
+    classes = _scene_classes(file)
+    order = list(classes)
     unknown = [n for n in names if n not in order]
     if unknown:
         sys.exit(f"error: no scene {', '.join(unknown)} in {file.name}. Scenes: {' '.join(order)}")
@@ -92,6 +98,12 @@ def render(file: Path, names: list[str], quality: str, jobs: int, captions: bool
             return scene, subprocess.run(cmd, cwd=file.parent, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
 
     began = time.time()
+    # MLX keeps model weights resident in each scene process. Render serially for
+    # Qwen so parallel scenes cannot multiply GPU memory use.
+    from explainer.tts import resolve_engine
+
+    if any(resolve_engine(c.voice, c.engine) == "qwen" for c in classes.values()):
+        jobs = 1
     with cf.ThreadPoolExecutor(max(1, min(jobs, len(todo)))) as pool:
         results = list(pool.map(one, todo))
     # Parallel scenes can collide on a shared cache file (LaTeX, narration). Retry each failure once, alone.
@@ -137,7 +149,7 @@ def failure_summary(log: str, scene_file: str) -> str:
 
 
 def caption_cues(start: float, end: float, words: list[dict], max_chars: int = 42) -> list[tuple[float, float, str]]:
-    """Split one narration line into caption cues, timed from Kokoro's word timestamps."""
+    """Split one narration passage into caption cues using measured word timestamps."""
     chunks, current = [], []
     for w in words:
         # Punctuation always stays with the words before it.

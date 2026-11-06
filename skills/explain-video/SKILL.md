@@ -5,135 +5,122 @@ description: Use when the user asks for an explainer video, an animated explanat
 
 # Video explainer
 
-Make a narrated, 3Blue1Brown-style explainer video on any topic. Visuals are Manim
-(Community Edition). Narration is Kokoro-82M, a local text-to-speech model. It runs
-on the machine with no API key. Each line of narration sets the timing of the
-animation that goes with it.
+Make a narrated explainer with Manim Community and local speech synthesis. The
+preferred narrator is Qwen3-TTS through MLX on Apple Silicon. Kokoro remains
+available. Speech synthesis, word alignment, and rendering run on the machine.
+Setup downloads packages, models, fonts, and icons. No hosted speech API is needed.
 
-The work has two parts:
+Write `script.md`, then delegate the build to a builder with that file and
+`explainer guide`. Include the context the builder needs; it cannot see this
+conversation. If delegation is unavailable, follow the guide yourself.
 
-1. You write `script.md`: each line of narration and what is on screen while it plays.
-   You have the context, so you write the script.
-2. A subagent builds the video from `script.md`. It writes the scenes, renders them,
-   checks the layout, and makes the final render.
+The `explainer` command must be on `PATH`. For installation, see
+https://github.com/pranav7/video-explainers. Run `explainer -h` for commands.
 
-The build makes approximately 20 tool calls, and each call sends the full context
-again. A new subagent has a small context, so the build is cheaper and faster there.
-The subagent also runs in the background, so the user can continue to work with you.
+## Setup
 
-The `explainer` command does the rest of the work. It must be on `PATH`. For setup,
-see https://github.com/pranav7/video-explainers. Run `explainer -h` for the commands.
+Run `explainer doctor` for a missing dependency. It installs and checks the macOS
+toolchain. Run `explainer models` to prefetch pinned Qwen and aligner weights.
+Qwen requires Apple Silicon; select Kokoro explicitly for other environments.
+After the models are downloaded, use `EXPLAINER_OFFLINE=1` to prevent model
+downloads during synthesis and rendering. An uncached model must fail with
+an actionable error rather than use a hosted service.
 
-## 0. Setup (once per machine)
+## Plan
 
-Run `explainer doctor`. It installs Homebrew packages, fonts, TinyTeX, a Python env and
-the icons, then tests Kokoro and LaTeX. It is safe to run again. Run it if a command
-fails on a missing dependency.
-
-## 1. Plan
-
-- **Where.** If the conversation is about a project that has its own folder for
-  documents, put the video in a `videos/<slug>/` folder there. Otherwise use
+- Put project videos in its documents folder under `videos/<slug>/`. Otherwise use
   `~/Movies/explainers/<slug>/`.
-- **Audience and length.** Ask only if the request does not make them clear. Default:
-  a curious adult with no background in the topic, 2 to 4 minutes.
-- **Length of the script.** Kokoro speaks approximately 170 words a minute, so a
-  3-minute video has approximately 500 words of narration. Write one chapter for each
-  30 to 45 seconds.
+- Infer audience and length from the request. Default: a curious adult, 2 to 4 minutes.
+- Start with a concrete question, puzzle, or incident. Show one example, reveal
+  the mechanism, then generalize. End with one picture of the key idea or change.
+- Storyboard before coding. For each passage, specify the objects, their state,
+  what changes, and the word that cues the change. Use actual names and numbers.
+- Choose visual treatment for the subject: geometry, a simulation, a diagram,
+  a chart, code, or an illustration. The kit supplies useful parts, not a required
+  card layout. Preserve objects as the explanation develops.
 
-Pick the shape that fits the topic.
+## Write script.md
 
-For a concept (an algorithm, an idea in maths or science):
-
-1. Open on a concrete question or puzzle, not a definition.
-2. Build intuition with one specific example that the viewer can see.
-3. Generalize, and only then show the formula. The formula names what they already saw.
-4. End on the key idea in one picture.
-
-For a situation (a run that failed, an incident, a design, a catch-up on work):
-
-1. Open on what happened, with the real numbers.
-2. Show the mechanism that caused it, one step at a time.
-3. Show what changes: the fix, the decision, or the next step.
-4. End on one picture of the whole system with the change in place.
-
-## 2. Write script.md
-
-Write `script.md` in the video directory, in this format:
+Use chapters named `## <number>. <SceneName>: <chapter title>`. Each becomes a scene
+and a chapter marker. Include the audience, length, concept palette, and voice
+before the chapters.
 
 ```markdown
 # Why the orders page is slow
 
-For engineers on the team. About 3 minutes.
+For engineers. About 3 minutes.
+Voice: Ellis. Normal speed.
 
 ## Palette
 
 | Concept | Colour |
 | --- | --- |
-| The API server | SKY |
-| The database | VIOLET |
-| Slow, wasted work | CORAL |
-| The fix | MINT |
+| Requests | SKY |
+| Database | VIOLET |
+| Wasted work | CORAL |
+| Fix | MINT |
 
-## 1. Hook: Fifty orders, fifty queries
+## 1. Hook: Fifty trips for one page
 
-- "The orders page takes four seconds to load fifty orders."
-  - A browser card with "4.1 s" in coral, and a list of 50 order tags.
-- "The server asks the database once for each order."
-  - An API server card and a database card. Packets travel between them, one per order.
+- "Fifty orders, fifty database trips. Watch the requests queue up while the page waits."
+  - A stream of fifty order dots moves toward the database, one at a time.
+  - On "queue", the waiting dots accumulate. A coral label reads "50 trips".
+- "Now send one request for the whole set. The same orders arrive together."
+  - Keep the orders and database in place. Collapse the requests into one bundle.
+  - On "together", the bundle opens into the same fifty orders. Label: "1 trip".
 ```
 
-Each chapter heading is `## <number>. <SceneName>: <chapter title>`. The builder makes
-one scene class for each chapter. The chapter titles become chapter markers in the video.
+Write connected passages of two or three sentences when they share one thought.
+A passage can have several visual cues. Do not force a new synthesis call for each
+sentence. Estimate length from the first audio sample, because the voice sets the pace.
 
-The builder cannot see this conversation. Put every name, number, label, and value
-that goes on screen into the script.
+Keep spoken text conversational. Spell out equations and code for speech. Use a
+local `pronunciations.json` object for recurring terms, for example
+`{"SQL": "sequel", "API": "A P I"}`. This changes speech without changing readable
+captions. Inline aliases such as `[SQL](sequel)` also preserve readable captions.
+For a single passage, the builder can pass `spoken=` separately from its display
+text. Kokoro phoneme markup is specific to Kokoro; do not send it to Qwen.
 
-Narration is read aloud exactly as written:
+Default voice: `Ellis`. Audition a representative passage before the full render,
+including names, numbers, and technical terms:
 
-- Write the spoken form: "x squared", "two pi r", "P O number", "v two".
-  Do not put LaTeX, symbols, or code in narration.
-- Write one sentence for each line, two at most. Each line is one visual change.
-- If Kokoro mispronounces a word, give its phonemes inline: `[Kokoro](/kˈOkəɹO/)`.
-- The default voice is `af_heart`. If the user cares about the voice, run
-  `explainer voices` and let them listen (`afplay voice-samples/<name>.wav`).
+```bash
+explainer say "The API sends one SQL query." audition.wav
+```
 
-Under each line, describe the picture, not a slide. Name the objects, what they show,
-and what moves. Give each concept one colour from the palette.
+Use `explainer voices voice-samples --engine qwen --text "<representative passage>"`
+for a comparison. On macOS, listen with `afplay`. Respect an established voice
+preference. If none exists, use the default and report it without blocking the build.
+Kokoro is explicit: `--engine kokoro --voice af_heart`.
 
-Take palette colours from the kit's accents: SKY, MINT, AMBER, CORAL, VIOLET, AQUA, ROSE,
-PEACH, LIME. The kit also has neutrals for things that are not a concept: SUBTLE,
-FAINT, INK. The kit has cards, tags, tables, code windows, pipelines, sequence
-diagrams, timelines, trees, callouts, charts, big numbers and Lucide icons. Describe
-pictures that use them.
+Use the same voice and speed for the audition and the finished video.
+The voice clones a reference clip, so the clip sets its intonation and pace.
+Check a full representative passage. Word alignment estimates timing; it does not
+verify spoken content or natural delivery. Check the rendered audio separately
+against the script. Local transcription can flag omissions, repetitions, and wrong
+words, but listening is needed to judge delivery. State any unavailable review.
 
-Show each number as it is. Do not ask for a number that counts up from zero.
+Use one colour per concept. Kit accents: SKY, MINT, AMBER, CORAL, VIOLET, AQUA, ROSE,
+PEACH, LIME. Neutrals: SUBTLE, FAINT, INK. Draw the mechanism rather than bullet lists.
+Show actual numbers directly. Animate changes between real states.
 
-## 3. Hand off the build
+## Build
 
-Start the builder as a subagent. If your instructions name an agent type or a model
-for building work, use them. Give it this prompt:
+Give the builder this prompt:
 
 ```text
-Build the explainer video for <directory>/script.md. Run `explainer guide` and
-follow it. Report the video path, its duration, and each layout warning that you
-left in place, with the reason.
+Build <directory>/script.md into video.mp4. Run `explainer guide` and follow it.
+Check a speech sample, then preview and review motion, audio, and layout. Keep
+speech synthesis and rendering local. Report the path, duration, voice, and any
+remaining pronunciation, synchronization, or layout problems with their reasons.
 ```
 
-If the user asked for captions, add "Render with --captions." to the prompt.
+If requested, add "Render with --captions." Tell the user that the build is in
+progress. Keep the same builder for revisions when available.
 
-Tell the user that the video is in progress, then continue with other work. If you
-cannot start a subagent, run `explainer guide` and do its steps yourself.
+## Deliver
 
-## 4. Deliver
-
-When the builder reports, open `<directory>/video.mp4` (on macOS, `open`). Tell the
-user:
-
-- The file path and the duration.
-- The video has chapter markers.
-- Any problem that the builder left open.
-
-Ask what to change. To make a change, send it to the same builder if your tools can
-message it, because the builder keeps its context. Otherwise start a new builder
-with the change. If the change affects the narration, edit `script.md` first.
+Open `<directory>/video.mp4` on macOS with `open`. Report its path, duration,
+chapter markers, voice, and remaining problems. If narration changes, update
+`script.md` before rebuilding. Never label a still-frame check as a motion or
+listening review. If playback or listening is unavailable, state that limitation.

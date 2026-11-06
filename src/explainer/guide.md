@@ -1,7 +1,7 @@
 # Build an explainer video from script.md
 
-You get a `script.md` file. It has a palette and chapters. Each chapter has lines of
-narration, and under each line, a description of the picture. Build `video.mp4` in
+You get a `script.md` file. It has a palette and chapters. Each chapter has narration
+passages with a storyboard: objects, states, motion, and spoken cues. Build `video.mp4` in
 the same directory. Run every command from that directory.
 
 This guide and the API reference at its end are complete. Do not read the package
@@ -18,9 +18,11 @@ Write one file, `video.py`. Do not name it `explainer.py`: that name hides the
   accent colours. For neutral things, use `SUBTLE`, `FAINT` or `INK`, not an accent.
 - Make one `ExplainerScene` subclass for each chapter, in the order of the chapters.
   Use the chapter's scene name as the class name, and its title as `title`.
-- Make each narration line one `self.say(...)` call or one `with self.narrate(...)`
-  block. Copy the narration text exactly.
-- End each scene with `self.fade_all()`.
+- Copy each narration passage exactly into `self.say(...)` or `with self.narrate(...)`.
+  Keep related sentences together so delivery stays connected. Use word cues for
+  multiple visual changes within the passage.
+- Keep related objects through the scene and transform their state. End the scene
+  with `self.fade_all()` after its final picture has had time to register.
 
 ```python
 from explainer.kit import *
@@ -50,42 +52,71 @@ class OneQueryPerRow(ExplainerScene):
 Use `self.say` for a beat with one group of animations. Use `with self.narrate(...)`
 for a beat with animations at different words.
 
+### Speech and pronunciation
+
+Default narrator: the voice `Ellis`, made with Qwen3-TTS through MLX on Apple Silicon.
+The model clones a bundled reference clip, so the clip sets the timbre, pace, and intonation.
+Set the scene attributes `engine`, `voice`, and `speed` to match the script. The default speed is 1.0.
+`EXPLAINER_ENGINE` and `EXPLAINER_VOICE` set process defaults.
+Kokoro is available with `engine = "kokoro"` and `voice = "af_heart"`.
+
+Audition a representative passage, including difficult terms, before the render:
+
+```bash
+explainer say "The API sends one SQL query." audition.wav
+afplay audition.wav
+```
+
+Keep the audition's voice and speed in the final video. Check the
+rendered narration against the script. Forced alignment can assign timestamps to
+incorrect speech, so a clean timing report does not verify spoken content. Local
+transcription can flag content errors; listening is needed to judge delivery.
+Report any review you cannot perform.
+
+Use `pronunciations.json` in the video directory for recurring terms:
+
+```json
+{"SQL": "sequel", "API": "A P I"}
+```
+
+`EXPLAINER_PRONUNCIATIONS` selects another dictionary file. An inline alias such as
+`[SQL](sequel)` changes speech while captions retain `SQL`. For a passage-specific
+correction, use `with self.narrate("The API responds.", spoken="The A P I responds.")`.
+Captions keep the display text. Kokoro's inline phoneme syntax is specific to that engine.
+
+Use connected passages of two or three related sentences, with several visual
+cues. The local aligner supplies word timestamps for `t.wait_until(...)`. Speech
+and alignment do not require a hosted service. Run `explainer models` after setup
+to prefetch pinned Qwen and aligner weights. Then
+`EXPLAINER_OFFLINE=1 explainer render video.py` uses cached models only.
+
 ### Make it clear and engaging
 
-- **Use the kit first.** Before you draw a shape by hand, look for a helper in the API
-  reference: cards (`box`), tags (`pill`, `badge`), `table`, `code`, `pipeline`,
-  `sequence`, `timeline`, `tree`, `callout`, `bars`, `stat`, `number`, `compare`, and Lucide icons
-  (`icon`). The helpers share one look, so the video looks consistent.
-- **Enter with `appear(...)`.** It fades in, rises slightly and settles, and staggers
-  several objects. Use `disappear(...)` to remove objects mid-scene.
-- **Show movement along a connector with `flow(arrow)`.**
-- **Point the viewer with `self.focus(m)`.** It dims everything else. Undo it with
-  `self.unfocus()`.
-
+- **Show the mechanism.** Prefer a concrete example that visibly changes. A
+  sequence of labels or cards rarely explains how something works.
+- **Choose the visual language.** Use geometry, plots, simulations, code, diagrams,
+  or illustrations to fit the subject. Kit helpers are optional building blocks.
+- **Preserve continuity.** Transform existing objects as their meaning changes.
+  Use `Transform`, `ReplacementTransform`, or `TransformMatchingTex`. A new
+  statement does not require a fresh screen.
+- **Give motion a purpose.** Show cause and effect, movement, comparison, or a
+  change in attention. Alternate construction, transformation, and short holds.
+  Avoid repetitive entrances and motion added only to satisfy a check.
+- **Cue the narrated idea.** Use `t.wait_until("word")` for a reveal, highlight,
+  or transition. `self.focus(m)` can dim unrelated objects; undo with `unfocus()`.
+- **Use the camera for a reason.** Pan or zoom to reveal a detail, then restore
+  context. For example, `self.camera.frame.animate.scale(0.5).move_to(m)`.
+  Objects added while zoomed in need the corresponding scale adjustment.
 - **Fill the frame.** The frame is approximately 14.2 by 8 units. Make the main
-  diagram 60 to 80 percent of the frame width. Use font size 24 or more for labels.
-- **Change the picture on every line.** Something moves, appears, or changes colour
-  while each line plays.
-- **Point at what the narration names.** On the word, use `Indicate`, `Circumscribe`,
-  `Flash`, or a colour change (`at="word"`, or `t.wait_until("word")`).
-- **Zoom instead of redraw.** To show a detail, move the camera to it, and then back:
-  `self.camera.frame.animate.scale(0.5).move_to(m)`, then `.scale(2).move_to(ORIGIN)`.
-  Objects that you add while zoomed in look larger by the zoom factor, so scale them
-  down by the same factor (`.scale(0.5)` for a zoom of 2).
-- **Transform, do not cut.** Go from one state to the next with `Transform`,
-  `ReplacementTransform`, and `TransformMatchingTex`. The viewer sees where each
-  thing came from.
-- **Show numbers as they are.** Put a figure on screen with `appear(number(45))` or
-  `appear(stat(45, "sales"))`. Do not count up from zero: it looks awkward and adds
-  nothing. When a value changes from one real state to another (2 rows, then 10), turn
-  the old number into the new one with `Transform`.
-- **Keep one idea on screen.** Fade out each object when the narration has finished
-  with it.
-- **One colour for each concept.** Use the palette for the whole video.
-- **Draw, do not list.** Do not make title cards with bullet lists.
-- **Split equations into parts** (`MathTex("a^2", "+", "b^2")`), so that you can colour
-  and transform each part.
-- **Lay out with `arrange` and `next_to`,** not with coordinates that you calculate.
+  diagram 60 to 80 percent of the width. Use font size 24 or more for labels.
+- **Keep attention clear.** Limit the scene to one active idea. Remove obsolete
+  objects while keeping references needed to understand the change.
+- **Use one colour per concept.** Keep the script's palette throughout the video.
+- **Show actual values.** Display figures directly. Animate from one real value
+  to another when the value changes; do not count an isolated statistic from zero.
+- **Split equations into parts** (`MathTex("a^2", "+", "b^2")`) for meaningful transforms.
+- **Lay out with `arrange` and `next_to`.** Custom coordinates suit geometry and
+  motion paths; check their placement and collisions in the preview.
 
 `ExplainerScene` is a Manim `MovingCameraScene`, so `self.camera.frame` can pan and
 zoom. For a scene with 3D, use `class X(NarrationMixin, ThreeDScene)`. The layout
@@ -97,8 +128,9 @@ check does not examine 3D scenes.
 explainer render video.py
 ```
 
-This command renders all scenes in parallel at 480p, joins them into `video.mp4`,
-and prints the layout check. If a scene fails, the output shows the line in
+This command renders scenes at 480p, joins them into `video.mp4`, and prints the
+layout check. Default Qwen runs render scenes serially to limit GPU memory use.
+Kokoro runs can render scenes in parallel. If a scene fails, the output shows the line in
 `video.py` and the exception. Output from `print()` in `video.py` goes to
 `media/logs/<Scene>.log`. All failures show in one run, so fix all of them
 before the next run.
@@ -106,14 +138,14 @@ before the next run.
 Fix each layout warning. If a warning is a false alarm, set `m.lint_ok = True` on that
 mobject, and give the reason in your report.
 
-## 3. Look at the video
+## 3. Review the video and audio
 
 ```bash
 explainer frames video.mp4
 ```
 
 This command makes contact sheets in `media/frames/`. Each tile shows the picture at
-the end of one narration line. Read each sheet, and look for these problems:
+the end of one narration passage. Read each sheet for layout problems:
 
 - A small diagram in a large empty frame.
 - More than one idea on screen.
@@ -127,8 +159,27 @@ To render again after you fix a problem, name only the scenes that you changed:
 `explainer render video.py SceneA SceneB`. The command joins the full video again.
 Then run `explainer frames video.mp4 SceneA SceneB` to see only their tiles.
 
-Do a maximum of two rounds of fixes. Then go to the final render, and report the
-problems that remain.
+Still frames cannot reveal rushed transitions, awkward holds, voice artifacts, or
+speech that does not match the motion. Play the preview and listen. On macOS, use
+`open video.mp4`; use `afplay audition.wav` for a voice sample. To isolate a motion
+sequence, extract a short clip:
+
+```bash
+ffmpeg -ss 10 -i video.mp4 -t 6 -c:v libx264 -c:a aac review.mp4
+```
+
+Check these conditions before the final render:
+
+- Labels remain readable through movement and camera changes.
+- Important changes happen on their spoken cues, without narration overlap.
+- Objects retain a clear identity through transitions.
+- Names, acronyms, numbers, and equations sound correct.
+- Delivery has natural phrasing and appropriate pauses, without clipped words.
+- Layout warnings are fixed or documented as justified false positives.
+
+Fix demonstrated problems and review affected sections again. Stop when these
+conditions pass, or report a concrete unresolved limitation. Do not claim a
+listening or motion review if the available tools only inspected still frames.
 
 ## 4. Final render
 
@@ -140,13 +191,15 @@ This command renders all scenes at 1080p60. The video has chapter markers. If th
 request asks for captions, add `--captions`: the video then has a caption track, and
 the captions are also in `video.srt`.
 
-Report the video path, the duration, and each warning that you left in place.
+Report the video path, duration, narrator, and each unresolved quality problem.
+Include any limitation on playback, listening, or offline verification.
 
 ## Common mistakes
 
 | Mistake | Fix |
 | --- | --- |
 | Long animations with a fixed `run_time`, so speech and picture drift apart | Use `t.remaining()` and `t.wait_until()` |
+| A late word cue or animations that finish after speech | Shorten the preceding animation, or give the spoken passage a natural pause. Recheck the timing warnings |
 | An object placed at calculated coordinates collides with another | Use `arrange` and `next_to`, and read the layout check |
 | `MathTex` fails with a LaTeX error | Run `explainer doctor`. Check that the TeX string compiles |
 | `Error processing file '/Users/runner/work/espeakng-loader/...'` | Kokoro was imported outside `explainer.tts`. Synthesize only through the scene API or `explainer say` |
