@@ -54,7 +54,7 @@ explainer say "One request, fifty orders." sample.wav
 afplay sample.wav
 ```
 
-`--speed` changes the tempo. To add a voice, see
+`--speed` changes the tempo. The default is 1.3, and 1.0 is the voice's own pace. To add a voice, see
 [the voice folder](src/explainer/voices/README.md).
 
 Use a `pronunciations.json` file in the video directory for recurring terms:

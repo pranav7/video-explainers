@@ -56,7 +56,7 @@ for a beat with animations at different words.
 
 Default narrator: the voice `Ellis`, made with Qwen3-TTS through MLX on Apple Silicon.
 The model clones a bundled reference clip, so the clip sets the timbre, pace, and intonation.
-Set the scene attributes `engine`, `voice`, and `speed` to match the script. The default speed is 1.0.
+Set the scene attributes `engine`, `voice`, and `speed` to match the script. The default speed is 1.3, and 1.0 is the voice's own pace.
 `EXPLAINER_ENGINE` and `EXPLAINER_VOICE` set process defaults.
 Kokoro is available with `engine = "kokoro"` and `voice = "af_heart"`.
 

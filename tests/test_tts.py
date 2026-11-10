@@ -174,7 +174,7 @@ def test_speech_is_stereo_with_the_voice_in_both_ears(fake_speech, monkeypatch, 
     tone = np.sin(np.linspace(0, 200, 2400)).astype(np.float32)
     monkeypatch.setattr(tts, "_qwen", lambda *args: (tone, 24000))
     monkeypatch.setattr(tts, "_kokoro", lambda *args: (tone, 24000, [{"word": "Hello.", "start": 0, "end": 0.1}]))
-    wav, _ = tts.synthesize("Hello.", **options)
+    wav, _ = tts.synthesize("Hello.", speed=1.0, **options)
     audio, _ = sf.read(wav)
     assert audio.shape == (2400, 2)
     assert np.array_equal(audio[:, 0], audio[:, 1]) and np.abs(audio).max() > 0.5
@@ -185,7 +185,7 @@ def test_cloned_speech_starts_after_a_fixed_short_pause(fake_speech, monkeypatch
 
     tone = np.sin(np.linspace(0, 2000, 24000)).astype(np.float32)
     monkeypatch.setattr(tts, "_qwen", lambda *args: (np.concatenate([np.zeros(12000, np.float32), tone]), 24000))
-    wav, meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis")
+    wav, meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis", speed=1.0)
     audio, _ = sf.read(wav)
     first = np.flatnonzero(np.abs(audio[:, 0]) > 0.01)[0] / 24000
     assert first == pytest.approx(0.08, abs=0.002)
@@ -193,9 +193,9 @@ def test_cloned_speech_starts_after_a_fixed_short_pause(fake_speech, monkeypatch
 
 
 def test_cache_hit_skips_synthesis_and_alignment(fake_speech):
-    wav, meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis")
+    wav, meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis", speed=1.0)
     first_calls = list(fake_speech)
-    cached_wav, cached_meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis")
+    cached_wav, cached_meta = tts.synthesize("Hello.", engine="qwen", voice="Ellis", speed=1.0)
     assert cached_wav == wav and cached_meta == meta
     assert fake_speech == first_calls
     assert [call[0] for call in first_calls] == ["qwen", "align"]
@@ -205,7 +205,7 @@ def test_cache_hit_skips_synthesis_and_alignment(fake_speech):
 def test_qwen_default_uses_bundled_narrator(fake_speech, monkeypatch):
     monkeypatch.delenv("EXPLAINER_VOICE", raising=False)
     _, meta = tts.synthesize("Hello.", engine="qwen")
-    assert meta["voice"] == "Ellis" and meta["speed"] == 1.0
+    assert meta["voice"] == "Ellis" and meta["speed"] == 1.3
     assert fake_speech[0] == ("qwen", "Hello.", "Ellis")
 
 

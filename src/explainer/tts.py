@@ -18,7 +18,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 DEFAULT_ENGINE = os.environ.get("EXPLAINER_ENGINE", "qwen")
-DEFAULT_SPEED = float(os.environ.get("EXPLAINER_SPEED", "1.0"))
+# Ellis reads with long pauses. At 1.3 times his own pace he is brisk but natural.
+DEFAULT_SPEED = float(os.environ.get("EXPLAINER_SPEED", "1.3"))
 CACHE_DIR = Path(os.environ.get("EXPLAINER_TTS_CACHE", "media/narration"))
 KOKORO_VOICES = ["af_heart", "af_bella", "am_michael", "am_fenrir", "bf_emma", "bm_george", "bm_fable"]
 # Each Qwen voice is a reference clip, <name>.wav, with its transcript, <name>.txt. See voices/README.md.
@@ -204,7 +205,7 @@ def synthesize(text: str, voice: str | None = None, speed: float | None = None, 
                engine: str | None = None, spoken: str | None = None) -> tuple[Path, dict]:
     """Return cached stereo WAV and metadata. Caption text and spoken spellings stay separate.
 
-    `speed` changes tempo when supplied; the default is the voice's own pace.
+    `speed` changes tempo. 1.0 is the voice's own pace; the default is DEFAULT_SPEED.
     """
     # Existing scenes with a Kokoro voice keep their narrator after the default changes.
     engine = resolve_engine(voice, engine)

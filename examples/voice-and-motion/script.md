@@ -4,7 +4,7 @@ For a curious adult. About half a minute. One continuous scene.
 
 ## Voice
 
-Ellis. Normal speed. Read SQL as "sequel". Caption it as "SQL".
+Ellis. Default speed. Read SQL as "sequel". Caption it as "SQL".
 
 ## Palette
 

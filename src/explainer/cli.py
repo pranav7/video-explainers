@@ -105,7 +105,7 @@ def main() -> None:
     s.add_argument("text")
     s.add_argument("out", type=Path)
     s.add_argument("--voice")
-    s.add_argument("--speed", type=float, help="optional speech speed factor (default: 1.0, or EXPLAINER_SPEED)")
+    s.add_argument("--speed", type=float, help="optional speech speed factor (default: 1.3, or EXPLAINER_SPEED; 1.0 is the voice's own pace)")
     s.add_argument("--engine", choices=["qwen", "kokoro"])
     s.add_argument("--spoken", help="spoken spelling, while TEXT remains the caption transcript")
 

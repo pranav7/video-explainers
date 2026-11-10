@@ -49,7 +49,7 @@ before the chapters.
 # Why the orders page is slow
 
 For engineers. About 3 minutes.
-Voice: Ellis. Normal speed.
+Voice: Ellis. Default speed.
 
 ## Palette
 
